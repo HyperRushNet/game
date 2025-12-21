@@ -1,243 +1,242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="utf-8" />
- <meta name="viewport" content="width=device-width,initial-scale=1" />
- <title>Loading... | HyperRush</title>
- <style>
- html,body {
-   height:100%;
-   margin:0;
-   font-family:Arial, sans-serif;
-   background:#fff;
-   color:#000;
- }
- iframe {
-   width:100%;
-   height:100%;
-   border:0;
-   display:none;
- }
- #loader {
-   position:fixed;
-   inset:0;
-   display:flex;
-   align-items:center;
-   justify-content:center;
-   z-index:9999;
- }
- #loader div {
-   width:40px;
-   height:40px;
-   border:4px solid currentColor;
-   border-top-color:transparent;
-   border-radius:50%;
-   animation:spin .8s linear infinite;
- }
- @keyframes spin {
-   to { transform:rotate(360deg); }
- }
- #redirect-block-notice {
-   position:fixed;
-   top:10px;
-   right:0;
-   transform:translateX(100%);
-   background:rgba(0,0,0,.75);
-   color:white;
-   padding:6px 12px;
-   border-radius:4px 0 0 4px;
-   z-index:10000;
-   user-select:none;
- }
- #redirect-block-notice.show {
-   animation: slideIn 0.35s forwards, slideOut 0.35s forwards 2.6s;
- }
- @keyframes slideIn { from { transform:translateX(100%); opacity:0 } to { transform:translateX(0); opacity:1 } }
- @keyframes slideOut { from { transform:translateX(0); opacity:1 } to { transform:translateX(100%); opacity:0 } }
- </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Loading... | HyperRush</title>
+  
+  <!-- Cloudflare Web Analytics -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"d9015ed7ad024103898a16365fea2d81"}'></script>
+
+  <style>
+    html,body {
+      height:100%;
+      margin:0;
+      font-family:Arial, sans-serif;
+      background:#fff;
+      color:#000;
+    }
+    iframe {
+      width:100%;
+      height:100%;
+      border:0;
+      display:none;
+    }
+    #loader {
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+    }
+    #loader div {
+      width:40px;
+      height:40px;
+      border:4px solid currentColor;
+      border-top-color:transparent;
+      border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform:rotate(360deg); }
+    }
+    #redirect-block-notice {
+      position:fixed;
+      top:10px;
+      right:0;
+      transform:translateX(100%);
+      background:rgba(0,0,0,.75);
+      color:white;
+      padding:6px 12px;
+      border-radius:4px 0 0 4px;
+      z-index:10000;
+      user-select:none;
+    }
+    #redirect-block-notice.show {
+      animation: slideIn 0.35s forwards, slideOut 0.35s forwards 2.6s;
+    }
+    @keyframes slideIn { from { transform:translateX(100%); opacity:0 } to { transform:translateX(0); opacity:1 } }
+    @keyframes slideOut { from { transform:translateX(0); opacity:1 } to { transform:translateX(100%); opacity:0 } }
+  </style>
 </head>
 <body>
- <div id="loader"><div></div></div>
- <div id="redirect-block-notice" aria-live="polite" role="status"></div>
- <script>
- const SETTINGS_KEY = 'userSettings';
- const loader = document.getElementById('loader');
- const notice = document.getElementById('redirect-block-notice');
- let iframe = null;
- let currentRedirectBlock = null;
- let currentGame = null;
- let gamesData = null;
+  <div id="loader"><div></div></div>
+  <div id="redirect-block-notice" aria-live="polite" role="status"></div>
 
- function readSettings() {
-   try {
-     const raw = localStorage.getItem(SETTINGS_KEY);
-     const parsed = raw ? JSON.parse(raw) : {};
-     return { redirectBlockSwitch: parsed.redirectBlockSwitch !== undefined ? !!parsed.redirectBlockSwitch : true };
-   } catch (e) {
-     return { redirectBlockSwitch: true };
-   }
- }
+  <script>
+    const SETTINGS_KEY = 'userSettings';
+    const loader = document.getElementById('loader');
+    const notice = document.getElementById('redirect-block-notice');
+    let iframe = null;
+    let currentRedirectBlock = null;
+    let currentGame = null;
+    let gamesData = null;
 
- function showNotice(text) {
-   notice.textContent = text;
-   notice.classList.remove('show');
-   void notice.offsetWidth;
-   notice.classList.add('show');
- }
+    function readSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return { redirectBlockSwitch: parsed.redirectBlockSwitch !== undefined ? !!parsed.redirectBlockSwitch : true };
+      } catch (e) {
+        return { redirectBlockSwitch: true };
+      }
+    }
 
- function injectScriptsIntoIframe(ifr, blockLogs, strictMode) {
-   try {
-     const doc = ifr.contentDocument || ifr.contentWindow?.document;
-     if (!doc || !doc.head) return;
+    function showNotice(text) {
+      notice.textContent = text;
+      notice.classList.remove('show');
+      void notice.offsetWidth;
+      notice.classList.add('show');
+    }
 
-     const fps = doc.createElement('script');
-     fps.textContent = `(function(){let last=0;function loop(ts){if(!last||ts-last>16){if(typeof window.__updateGame==='function')try{window.__updateGame();}catch(e){}if(typeof window.__renderGame==='function')try{window.__renderGame();}catch(e){}last=ts;}requestAnimationFrame(loop);}requestAnimationFrame(loop);})();`;
-     doc.head.appendChild(fps);
+    function injectScriptsIntoIframe(ifr, blockLogs, strictMode) {
+      try {
+        const doc = ifr.contentDocument || ifr.contentWindow?.document;
+        if (!doc || !doc.head) return;
 
-     const vis = doc.createElement('script');
-     vis.textContent = `document.addEventListener('visibilitychange',()=>{if(document.hidden){if(typeof window.__pauseGame==='function')try{window.__pauseGame();}catch(e){}}else{if(typeof window.__resumeGame==='function')try{window.__resumeGame();}catch(e){}}});`;
-     doc.head.appendChild(vis);
+        const fps = doc.createElement('script');
+        fps.textContent = `(function(){let last=0;function loop(ts){if(!last||ts-last>16){if(typeof window.__updateGame==='function')try{window.__updateGame();}catch(e){}if(typeof window.__renderGame==='function')try{window.__renderGame();}catch(e){}last=ts;}requestAnimationFrame(loop);}requestAnimationFrame(loop);})();`;
+        doc.head.appendChild(fps);
 
-     const passive = doc.createElement('script');
-     passive.textContent = `['touchstart','touchmove','wheel','keydown','keyup'].forEach(ev=>window.addEventListener(ev,()=>{}, {passive:true}));`;
-     doc.head.appendChild(passive);
+        const vis = doc.createElement('script');
+        vis.textContent = `document.addEventListener('visibilitychange',()=>{if(document.hidden){if(typeof window.__pauseGame==='function')try{window.__pauseGame();}catch(e){}}else{if(typeof window.__resumeGame==='function')try{window.__resumeGame();}catch(e){}}});`;
+        doc.head.appendChild(vis);
 
-     if (strictMode) {
-       const blockRedirects = doc.createElement('script');
-       blockRedirects.textContent = `(function(){const originalOpen=window.open;window.open=function(url,name,specs){console.warn('Blocked window.open:',url);return null;};const originalLocation=Object.getOwnPropertyDescriptor(window.location,'href');Object.defineProperty(window.location,'href',{get:originalLocation.get,set:function(val){console.warn('Blocked location.href change:',val);},configurable:true});window.location.assign=function(url){console.warn('Blocked location.assign:',url);};window.location.replace=function(url){console.warn('Blocked location.replace:',url);};})();`;
-       doc.head.appendChild(blockRedirects);
-     }
+        const passive = doc.createElement('script');
+        passive.textContent = `['touchstart','touchmove','wheel','keydown','keyup'].forEach(ev=>window.addEventListener(ev,()=>{}, {passive:true}));`;
+        doc.head.appendChild(passive);
 
-     if (blockLogs) {
-       const disableLogs = doc.createElement('script');
-       disableLogs.textContent = `(function(){try{console.log=console.debug=console.warn=console.error=function(){};}catch(e){}})();`;
-       doc.head.appendChild(disableLogs);
-     }
-   } catch (err) {
-     console.warn('injectScriptsIntoIframe:', err);
-   }
- }
+        if (strictMode) {
+          const blockRedirects = doc.createElement('script');
+          blockRedirects.textContent = `(function(){const originalOpen=window.open;window.open=function(url,name,specs){console.warn('Blocked window.open:',url);return null;};const originalLocation=Object.getOwnPropertyDescriptor(window.location,'href');Object.defineProperty(window.location,'href',{get:originalLocation.get,set:function(val){console.warn('Blocked location.href change:',val);},configurable:true});window.location.assign=function(url){console.warn('Blocked location.assign:',url);};window.location.replace=function(url){console.warn('Blocked location.replace:',url);};})();`;
+          doc.head.appendChild(blockRedirects);
+        }
 
- function createIframeForGame(redirectBlock) {
-   if (iframe) { try { iframe.remove(); } catch(e) {} iframe = null; }
-   if (!currentGame) return;
+        if (blockLogs) {
+          const disableLogs = doc.createElement('script');
+          disableLogs.textContent = `(function(){try{console.log=console.debug=console.warn=console.error=function(){};}catch(e){}})();`;
+          doc.head.appendChild(disableLogs);
+        }
+      } catch (err) {
+        console.warn('injectScriptsIntoIframe:', err);
+      }
+    }
 
-   const newIframe = document.createElement('iframe');
-   newIframe.src = currentGame.link;
-   const strictMode = !!redirectBlock;
+    function createIframeForGame(redirectBlock) {
+      if (iframe) { try { iframe.remove(); } catch(e) {} iframe = null; }
+      if (!currentGame) return;
 
-   let sandboxValue = strictMode
-     ? 'allow-scripts allow-same-origin allow-pointer-lock'
-     : 'allow-scripts allow-same-origin allow-pointer-lock allow-top-navigation allow-forms allow-modals allow-popups allow-presentation allow-storage-access-by-user-activation allow-downloads allow-orientation-lock allow-video-frame-callbacks allow-popups-to-escape-sandbox';
+      const newIframe = document.createElement('iframe');
+      newIframe.src = currentGame.link;
+      const strictMode = !!redirectBlock;
 
-   newIframe.setAttribute('sandbox', sandboxValue);
+      let sandboxValue = strictMode
+        ? 'allow-scripts allow-same-origin allow-pointer-lock'
+        : 'allow-scripts allow-same-origin allow-pointer-lock allow-top-navigation allow-forms allow-modals allow-popups allow-presentation allow-storage-access-by-user-activation allow-downloads allow-orientation-lock allow-video-frame-callbacks allow-popups-to-escape-sandbox';
 
-   newIframe.onload = () => {
-     injectScriptsIntoIframe(newIframe, !!redirectBlock, strictMode);
-     newIframe.style.display = 'block';
-     loader.style.display = 'none';
-     newIframe.focus();
-     showNotice(`Redirect block: ${redirectBlock ? 'ON' : 'OFF'}`);
-   };
+      newIframe.setAttribute('sandbox', sandboxValue);
 
-   newIframe.onerror = () => {
-     console.error('Iframe failed to load, redirecting home');
-     location.href = '/';
-   };
+      newIframe.onload = () => {
+        injectScriptsIntoIframe(newIframe, !!redirectBlock, strictMode);
+        newIframe.style.display = 'block';
+        loader.style.display = 'none';
+        newIframe.focus();
+        showNotice(`Redirect block: ${redirectBlock ? 'ON' : 'OFF'}`);
+      };
 
-   document.body.appendChild(newIframe);
-   iframe = newIframe;
-   currentRedirectBlock = !!redirectBlock;
- }
+      newIframe.onerror = () => {
+        console.error('Iframe failed to load, redirecting home');
+        location.href = '/';
+      };
 
- async function loadGamesJSON(timeoutMs = 5000) {
-   try {
-     const controller = new AbortController();
-     const id = setTimeout(() => controller.abort(), timeoutMs);
-     const res = await fetch('/assets/json/games.json', { signal: controller.signal });
-     clearTimeout(id);
-     if (!res.ok) throw new Error('games.json fetch failed');
-     return await res.json();
-   } catch (e) {
-     console.error('Failed to load games.json', e);
-     return null;
-   }
- }
+      document.body.appendChild(newIframe);
+      iframe = newIframe;
+      currentRedirectBlock = !!redirectBlock;
+    }
 
- // === NIEUWE LOGICA: game-ID uit URL-path halen i.p.v. hash ===
- function getGameIdFromPath() {
-   let path = window.location.pathname;           // bijv. "/game/123" of "/play/456"
-   let hash = window.location.hash;               // wordt nu genegeerd voor de ID
-   let parts = path.split('/').filter(p => p);   // verwijder lege delen
+    async function loadGamesJSON(timeoutMs = 5000) {
+      try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeoutMs);
+        const res = await fetch('/assets/json/games.json', { signal: controller.signal });
+        clearTimeout(id);
+        if (!res.ok) throw new Error('games.json fetch failed');
+        return await res.json();
+      } catch (e) {
+        console.error('Failed to load games.json', e);
+        return null;
+      }
+    }
 
-   // Neem het laatste niet-lege deel van de path als game-ID
-   if (parts.length === 0) return null;
-   const lastPart = parts[parts.length - 1];
+    function getGameIdFromPath() {
+      let path = window.location.pathname;
+      let parts = path.split('/').filter(p => p);
+      if (parts.length === 0) return null;
+      const lastPart = parts[parts.length - 1];
+      const gameId = parseInt(lastPart, 10);
+      return isNaN(gameId) ? null : gameId;
+    }
 
-   // Als de URL eindigt met een hash (bijv. /game/123#iets), gebruik dan nog steeds "123"
-   const gameId = parseInt(lastPart, 10);
-   return isNaN(gameId) ? null : gameId;
- }
+    async function loadGame() {
+      document.title = "Loading... | HyperRush";
+      loader.style.display = 'flex';
 
- async function loadGame() {
-   document.title = "Loading... | HyperRush";
-   loader.style.display = 'flex';
+      const gameNumber = getGameIdFromPath();
+      if (!gameNumber) return location.href = '/';
 
-   const gameNumber = getGameIdFromPath();
-   if (!gameNumber) return location.href = '/';
+      if (!gamesData) {
+        gamesData = await loadGamesJSON();
+        if (!gamesData) return location.href = '/';
+      }
 
-   if (!gamesData) {
-     gamesData = await loadGamesJSON();
-     if (!gamesData) return location.href = '/';
-   }
+      currentGame = gamesData.find(g => Number(g.number) === gameNumber);
+      if (!currentGame) return location.href = '/';
 
-   currentGame = gamesData.find(g => Number(g.number) === gameNumber);
-   if (!currentGame) return location.href = '/';
+      document.title = `${currentGame.name} | HyperRush`;
+      const settings = readSettings();
+      createIframeForGame(!!settings.redirectBlockSwitch);
+    }
 
-   document.title = `${currentGame.name} | HyperRush`;
-   const settings = readSettings();
-   createIframeForGame(!!settings.redirectBlockSwitch);
- }
+    function handleSettingsChange(newSettings) {
+      const redirectBlock = !!(newSettings && newSettings.redirectBlockSwitch);
+      if (currentRedirectBlock === null) {
+        currentRedirectBlock = redirectBlock;
+        return;
+      }
+      if (redirectBlock !== currentRedirectBlock) {
+        showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
+        loader.style.display = 'flex';
+        createIframeForGame(redirectBlock);
+      } else {
+        showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
+      }
+    }
 
- function handleSettingsChange(newSettings) {
-   const redirectBlock = !!(newSettings && newSettings.redirectBlockSwitch);
-   if (currentRedirectBlock === null) {
-     currentRedirectBlock = redirectBlock;
-     return;
-   }
-   if (redirectBlock !== currentRedirectBlock) {
-     showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
-     loader.style.display = 'flex';
-     createIframeForGame(redirectBlock);
-   } else {
-     showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
-   }
- }
+    window.addEventListener('storage', e => {
+      if (e.key === SETTINGS_KEY) {
+        try {
+          const parsed = e.newValue ? JSON.parse(e.newValue) : {};
+          handleSettingsChange({ redirectBlockSwitch: parsed.redirectBlockSwitch !== undefined ? !!parsed.redirectBlockSwitch : true });
+        } catch (_) {
+          handleSettingsChange({ redirectBlockSwitch: true });
+        }
+      }
+    });
 
- window.addEventListener('storage', e => {
-   if (e.key === SETTINGS_KEY) {
-     try {
-       const parsed = e.newValue ? JSON.parse(e.newValue) : {};
-       handleSettingsChange({ redirectBlockSwitch: parsed.redirectBlockSwitch !== undefined ? !!parsed.redirectBlockSwitch : true });
-     } catch (_) {
-       handleSettingsChange({ redirectBlockSwitch: true });
-     }
-   }
- });
+    window.addEventListener('userSettingsChanged', e => {
+      if (e?.detail) handleSettingsChange(e.detail);
+    });
 
- window.addEventListener('userSettingsChanged', e => {
-   if (e?.detail) handleSettingsChange(e.detail);
- });
+    window.addEventListener('popstate', () => {
+      if (iframe) { try { iframe.remove(); } catch(e) {} iframe = null; }
+      loadGame();
+    });
 
- // Luister naar popstate (bijv. terug/vooruit knop) + eerste load
- window.addEventListener('popstate', () => {
-   if (iframe) { try { iframe.remove(); } catch(e) {} iframe = null; }
-   loadGame();
- });
-
- document.addEventListener('DOMContentLoaded', () => {
-   loadGame();
- });
- </script>
+    document.addEventListener('DOMContentLoaded', () => {
+      loadGame();
+    });
+  </script>
 </body>
 </html>
