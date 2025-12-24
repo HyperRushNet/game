@@ -5,11 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <title>HyperRush Games</title>
-
-  <!-- Plugins :) -->
   <script src="/assets/js/pluginLoader.min.js?v=20250806"></script>
-  
-  <!-- CloudFlare Analytics -->
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"d9015ed7ad024103898a16365fea2d81"}'></script>
   <style>
     html,body{height:100%;margin:0;padding:0;overflow:hidden;font-family:Arial,sans-serif;background:#000;color:#fff}
@@ -46,7 +42,7 @@
 
     function showNotice(text){noticeText.textContent=text;notice.classList.remove("show");void notice.offsetWidth;notice.classList.add("show")}
 
-    function injectStrictIsolation(ifr,blockLogs){
+    function injectMinimal(ifr,blockLogs){
       try{
         const doc=ifr.contentDocument||ifr.contentWindow?.document;
         if(!doc||!doc.head)return;
@@ -63,31 +59,9 @@
         passive.textContent=`["touchstart","touchmove","wheel","keydown","keyup"].forEach(ev=>addEventListener(ev,()=>{},{passive:true}));`;
         doc.head.appendChild(passive);
 
-        const strict=doc.createElement("script");
-        strict.textContent=`(function(){
-          window.alert=window.confirm=window.prompt=function(){return null};
-          const block=()=>{throw new Error("Blocked")};
-          window.open=()=>null;
-          window.location.assign=window.location.replace=block;
-          Object.defineProperty(window.location,"href",{get:()=>window.location.pathname,set:block,configurable:true});
-          delete window.parent;delete window.top;delete window.opener;
-          Object.defineProperties(window,{parent:{get:()=>window,configurable:false},top:{get:()=>window,configurable:false},opener:{get:()=>null,configurable:false}});
-          const realPM=window.postMessage;
-          window.postMessage=function(m,o,t){if(o!==window.origin&&o!=="*")return;realPM.apply(this,arguments)};
-          window.close=window.focus=window.blur=()=>{};
-          Object.defineProperty(document,"domain",{value:document.domain,writable:false,configurable:false});
-          ["beforeunload","unload","pagehide"].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();e.returnValue="";return false},{capture:true}));
-          const realAE=window.addEventListener;
-          window.addEventListener=function(t,l,o){if(["beforeunload","unload","pagehide","message"].includes(t))return;realAE.apply(this,arguments)};
-          const realST=window.setTimeout;const realSI=window.setInterval;
-          window.setTimeout=function(f,d,...a){return realST(typeof f==="string"?f:()=>{},d,...a)};
-          window.setInterval=function(f,d,...a){return realSI(typeof f==="string"?f:()=>{},d,...a)};
-        })();`;
-        doc.head.appendChild(strict);
-
         if(blockLogs){
           const noLogs=doc.createElement("script");
-          noLogs.textContent=`(function(){const n=()=>{};console.log=console.debug=console.info=console.warn=console.error=console.table=n;window.console=new Proxy(console,{get:()=>n})})();`;
+          noLogs.textContent=`(function(){const n=()=>{};console.log=console.debug=console.info=console.warn=console.error=n;})();`;
           doc.head.appendChild(noLogs);
         }
       }catch(e){}
@@ -101,22 +75,21 @@
       newIframe.src=currentGame.link;
       newIframe.allowFullscreen=true;
 
-      let sb="allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups allow-presentation";
+      let sb="allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups allow-forms allow-top-navigation allow-presentation";
       if(!redirectBlock)sb+=" allow-popups-to-escape-sandbox allow-orientation-lock";
 
       newIframe.setAttribute("sandbox",sb);
       newIframe.setAttribute("referrerpolicy","no-referrer");
-      newIframe.setAttribute("csp","default-src 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline';");
 
       newIframe.onload=()=>{
-        injectStrictIsolation(newIframe,!!redirectBlock);
+        injectMinimal(newIframe,!!redirectBlock);
         loader.style.display="none";
         newIframe.style.display="block";
         newIframe.focus();
         newIframe.contentWindow?.focus();
         setTimeout(()=>{newIframe.focus();newIframe.contentWindow?.focus()},300);
         setTimeout(()=>{newIframe.focus();newIframe.contentWindow?.focus()},800);
-        showNotice(`Redirect block: ${redirectBlock?"ON (strict)":"OFF (loose)"}`);
+        showNotice(`Redirect block: ${redirectBlock?"ON":"OFF"}`);
         initAutoFocusManagement();
       };
 
@@ -193,10 +166,10 @@
       const rb=!!(ns&&ns.redirectBlockSwitch);
       if(currentRedirectBlock===null){currentRedirectBlock=rb;return}
       if(rb!==currentRedirectBlock){
-        showNotice(`Redirect block: ${rb?"ON (strict)":"OFF (loose)"}`);
+        showNotice(`Redirect block: ${rb?"ON":"OFF"}`);
         loader.style.display="flex";
         createIframeForGame(rb)
-      }else{showNotice(`Redirect block: ${rb?"ON (strict)":"OFF (loose)"}`)}
+      }else{showNotice(`Redirect block: ${rb?"ON":"OFF"}`)}
     }
 
     window.addEventListener("storage",e=>{
