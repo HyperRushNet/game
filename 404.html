@@ -5,29 +5,111 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <title>HyperRush Games</title>
+  
   <!-- Plugin Loader -->
   <script src="/assets/js/pluginLoader.min.js?v=20250806"></script>
+  
   <!-- Cloudflare Web Analytics -->
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"d9015ed7ad024103898a16365fea2d81"}'></script>
+  
   <style>
-    html,body { height:100%; margin:0; font-family:Arial, sans-serif; background:#fff; color:#000; }
-    iframe { width:100%; height:100%; border:0; display:none; }
-    #loader { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:9999; }
-    #loader div { width:40px; height:40px; border:4px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    #redirect-block-notice { position:fixed; top:10px; right:0; transform:translateX(100%); background:rgba(0,0,0,.75); color:white; padding:6px 12px; border-radius:4px 0 0 4px; z-index:10000; user-select:none; }
-    #redirect-block-notice.show { animation: slideIn 0.35s forwards, slideOut 0.35s forwards 2.6s; }
-    @keyframes slideIn { from { transform:translateX(100%); opacity:0 } to { transform:translateX(0); opacity:1 } }
-    @keyframes slideOut { from { transform:translateX(0); opacity:1 } to { transform:translateX(100%); opacity:0 } }
+    html,body {
+      height:100%;
+      margin:0;
+      padding:0;
+      overflow:hidden;
+      font-family:Arial, sans-serif;
+      background:#000;
+      color:#fff;
+    }
+    iframe {
+      width:100%;
+      height:100%;
+      border:0;
+      display:none;
+      position:absolute;
+      inset:0;
+      z-index:1;
+    }
+    #loader {
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,0.95);
+      z-index:9999;
+      color:white;
+    }
+    #loader div {
+      width:40px;
+      height:40px;
+      border:4px solid currentColor;
+      border-top-color:transparent;
+      border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform:rotate(360deg); }
+    }
+    #redirect-block-notice {
+      position:fixed;
+      top:12px;
+      right:12px;
+      background:rgba(0,0,0,0.85);
+      color:#fff;
+      padding:10px 16px;
+      border-radius:8px;
+      z-index:10000;
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      transition:opacity 0.4s;
+      pointer-events:auto;
+    }
+    #redirect-block-notice button.close-notice {
+      background:none;
+      border:none;
+      color:#fff;
+      font-size:20px;
+      cursor:pointer;
+      padding:0;
+      width:24px;
+      height:24px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #redirect-block-notice button.close-notice:hover {
+      color:#ff6b6b;
+    }
+    #redirect-block-notice.show {
+      animation: slideIn 0.35s forwards, slideOut 0.35s forwards 2.6s;
+    }
+    @keyframes slideIn {
+      from { transform:translateX(100%); opacity:0 }
+      to { transform:translateX(0); opacity:1 }
+    }
+    @keyframes slideOut {
+      from { transform:translateX(0); opacity:1 }
+      to { transform:translateX(100%); opacity:0 }
+    }
   </style>
 </head>
 <body>
   <div id="loader"><div></div></div>
-  <div id="redirect-block-notice" aria-live="polite" role="status"></div>
+  
+  <div id="redirect-block-notice" aria-live="polite" role="status">
+    <span id="notice-text"></span>
+    <button class="close-notice" aria-label="Close notice">×</button>
+  </div>
+
   <script>
     const SETTINGS_KEY = 'userSettings';
     const loader = document.getElementById('loader');
     const notice = document.getElementById('redirect-block-notice');
+    const noticeText = document.getElementById('notice-text');
     let iframe = null;
     let currentRedirectBlock = null;
     let currentGame = null;
@@ -44,7 +126,7 @@
     }
 
     function showNotice(text) {
-      notice.textContent = text;
+      noticeText.textContent = text;
       notice.classList.remove('show');
       void notice.offsetWidth;
       notice.classList.add('show');
@@ -55,19 +137,22 @@
         const doc = ifr.contentDocument || ifr.contentWindow?.document;
         if (!doc || !doc.head) return;
 
+        // FPS limiter / game loop helper
         const fps = doc.createElement('script');
         fps.textContent = `(function(){let last=0;function loop(ts){if(!last||ts-last>16){if(typeof window.__updateGame==='function')try{window.__updateGame();}catch(e){}if(typeof window.__renderGame==='function')try{window.__renderGame();}catch(e){}last=ts;}requestAnimationFrame(loop);}requestAnimationFrame(loop);})();`;
         doc.head.appendChild(fps);
 
+        // Visibility pause/resume
         const vis = doc.createElement('script');
         vis.textContent = `document.addEventListener('visibilitychange',()=>{if(document.hidden){if(typeof window.__pauseGame==='function')try{window.__pauseGame();}catch(e){}}else{if(typeof window.__resumeGame==='function')try{window.__resumeGame();}catch(e){}}});`;
         doc.head.appendChild(vis);
 
+        // Passive event listeners
         const passive = doc.createElement('script');
         passive.textContent = `['touchstart','touchmove','wheel','keydown','keyup'].forEach(ev=>window.addEventListener(ev,()=>{}, {passive:true}));`;
         doc.head.appendChild(passive);
 
-        // Altijd redirect-blokker injecteren (ook in loose mode, voor extra veiligheid)
+        // Redirect blocker (always injected)
         const blockRedirects = doc.createElement('script');
         blockRedirects.textContent = `(function(){const originalOpen=window.open;window.open=function(url,name,specs){console.warn('Blocked window.open:',url);return null;};const originalLocation=Object.getOwnPropertyDescriptor(window.location,'href');Object.defineProperty(window.location,'href',{get:originalLocation.get,set:function(val){console.warn('Blocked location.href change:',val);},configurable:true});window.location.assign=function(url){console.warn('Blocked location.assign:',url);};window.location.replace=function(url){console.warn('Blocked location.replace:',url);};})();`;
         doc.head.appendChild(blockRedirects);
@@ -84,31 +169,40 @@
 
     function createIframeForGame(redirectBlock) {
       if (iframe) {
-        try { iframe.remove(); } catch(e) {}
+        iframe.remove();
         iframe = null;
       }
       if (!currentGame) return;
 
       const newIframe = document.createElement('iframe');
       newIframe.src = currentGame.link;
+      newIframe.allowFullscreen = true;
 
-      let sandboxValue;
-      if (redirectBlock) {
-        // Strict mode: strenger tegen redirects, maar games werken beter (overlays, fullscreen, etc.)
-        sandboxValue = 'allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation';
-      } else {
-        // Loose mode: zoals origineel, alles toegestaan behalve misschien top-navigation blok
-        sandboxValue = 'allow-scripts allow-same-origin allow-pointer-lock allow-top-navigation allow-forms allow-modals allow-popups allow-presentation allow-storage-access-by-user-activation allow-downloads allow-orientation-lock allow-video-frame-callbacks allow-popups-to-escape-sandbox';
-      }
+      let sandboxValue = redirectBlock
+        ? 'allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation'
+        : 'allow-scripts allow-same-origin allow-pointer-lock allow-top-navigation allow-forms allow-modals allow-popups allow-presentation allow-storage-access-by-user-activation allow-downloads allow-orientation-lock allow-video-frame-callbacks allow-popups-to-escape-sandbox';
 
       newIframe.setAttribute('sandbox', sandboxValue);
 
       newIframe.onload = () => {
         injectScriptsIntoIframe(newIframe, !!redirectBlock, !!redirectBlock);
-        newIframe.style.display = 'block';
+
         loader.style.display = 'none';
+        newIframe.style.display = 'block';
+
+        // Initial focus
         newIframe.focus();
+        newIframe.contentWindow?.focus();
+
+        setTimeout(() => {
+          newIframe.focus();
+          newIframe.contentWindow?.focus();
+        }, 300);
+
         showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
+
+        // Start automatic focus management
+        initAutoFocusManagement();
       };
 
       newIframe.onerror = () => {
@@ -119,9 +213,89 @@
       document.body.appendChild(newIframe);
       iframe = newIframe;
       currentRedirectBlock = !!redirectBlock;
+
+      // Pre-load focus attempt
+      setTimeout(() => newIframe.focus(), 100);
     }
 
-    // ... (rest van de code blijft hetzelfde: loadGamesJSON, getGameIdFromPath, loadGame, handleSettingsChange, event listeners)
+    // === VOLLEDIG AUTOMATISCHE FOCUS MANAGEMENT ===
+    function initAutoFocusManagement() {
+      if (!iframe) return;
+
+      document.addEventListener('click', (e) => {
+        if (!iframe) return;
+
+        const target = e.target;
+
+        // Klik direct op iframe → laat browser focus geven
+        if (target === iframe || iframe.contains(target)) return;
+
+        // Natuurlijk focusbare elementen (button, input, a, etc.)
+        const naturallyFocusable = target.matches &&
+          (target.matches('button, input, textarea, select, a, [tabindex]:not([tabindex="-1"])') ||
+           (target.hasAttribute('tabindex') && target.getAttribute('tabindex') !== '-1'));
+
+        if (naturallyFocusable) return;
+
+        // Elementen met click handler
+        let el = target;
+        while (el && el !== document.body) {
+          if (el.onclick || (el.getAttribute && el.getAttribute('onclick'))) {
+            return; // interactieve UI
+          }
+          el = el.parentElement;
+        }
+
+        // Anders: lege achtergrond → focus terug naar game
+        iframe.focus();
+        iframe.contentWindow?.focus();
+
+        setTimeout(() => {
+          iframe.focus();
+          iframe.contentWindow?.focus();
+        }, 50);
+      }, true);
+
+      // Touch support
+      document.addEventListener('touchstart', (e) => {
+        if (!iframe) return;
+        const target = e.target;
+
+        if (target === iframe || iframe.contains(target)) return;
+
+        if (target.closest && target.closest('button,input,textarea,select,a,[role="button"],[tabindex]') || target.onclick) {
+          return;
+        }
+
+        iframe.focus();
+        iframe.contentWindow?.focus();
+      }, true);
+
+      // Muisbeweging over lege ruimte (goed voor pointer lock games)
+      document.addEventListener('mousemove', (e) => {
+        if (!iframe) return;
+        const target = e.target;
+
+        if (target === iframe || iframe.contains(target)) return;
+
+        if (target.closest && target.closest('button,input,a,[role="button"],[tabindex]')) return;
+
+        if (document.activeElement !== iframe) {
+          iframe.focus();
+        }
+      });
+    }
+
+    // Visibility focus restore
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && iframe) {
+        setTimeout(() => {
+          iframe.focus();
+          iframe.contentWindow?.focus();
+        }, 100);
+      }
+    });
+
     async function loadGamesJSON(timeoutMs = 5000) {
       try {
         const controller = new AbortController();
@@ -148,25 +322,32 @@
     async function loadGame() {
       document.title = "Loading... | HyperRush";
       loader.style.display = 'flex';
+
       const gameNumber = getGameIdFromPath();
       if (!gameNumber) return location.href = '/';
+
       if (!gamesData) {
         gamesData = await loadGamesJSON();
         if (!gamesData) return location.href = '/';
       }
+
       currentGame = gamesData.find(g => Number(g.number) === gameNumber);
       if (!currentGame) return location.href = '/';
+
       document.title = `${currentGame.name} | HyperRush`;
+
       const settings = readSettings();
       createIframeForGame(!!settings.redirectBlockSwitch);
     }
 
     function handleSettingsChange(newSettings) {
       const redirectBlock = !!(newSettings && newSettings.redirectBlockSwitch);
+
       if (currentRedirectBlock === null) {
         currentRedirectBlock = redirectBlock;
         return;
       }
+
       if (redirectBlock !== currentRedirectBlock) {
         showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
         loader.style.display = 'flex';
@@ -176,6 +357,7 @@
       }
     }
 
+    // Settings listeners
     window.addEventListener('storage', e => {
       if (e.key === SETTINGS_KEY) {
         try {
@@ -191,14 +373,21 @@
       if (e?.detail) handleSettingsChange(e.detail);
     });
 
+    // Navigation
     window.addEventListener('popstate', () => {
       if (iframe) {
-        try { iframe.remove(); } catch(e) {}
+        iframe.remove();
         iframe = null;
       }
       loadGame();
     });
 
+    // Close notice button
+    document.querySelector('.close-notice')?.addEventListener('click', () => {
+      notice.style.display = 'none';
+    });
+
+    // Start
     document.addEventListener('DOMContentLoaded', () => {
       loadGame();
     });
