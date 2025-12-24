@@ -5,392 +5,214 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
   <title>HyperRush Games</title>
-  
-  <!-- Plugin Loader -->
+
+  <!-- Plugins :) -->
   <script src="/assets/js/pluginLoader.min.js?v=20250806"></script>
   
-  <!-- Cloudflare Web Analytics -->
+  <!-- CloudFlare Analytics -->
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"d9015ed7ad024103898a16365fea2d81"}'></script>
-  
   <style>
-    html,body {
-      height:100%;
-      margin:0;
-      padding:0;
-      overflow:hidden;
-      font-family:Arial, sans-serif;
-      background:#000;
-      color:#fff;
-    }
-    iframe {
-      width:100%;
-      height:100%;
-      border:0;
-      display:none;
-      position:absolute;
-      inset:0;
-      z-index:1;
-    }
-    #loader {
-      position:fixed;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(0,0,0,0.95);
-      z-index:9999;
-      color:white;
-    }
-    #loader div {
-      width:40px;
-      height:40px;
-      border:4px solid currentColor;
-      border-top-color:transparent;
-      border-radius:50%;
-      animation:spin .8s linear infinite;
-    }
-    @keyframes spin {
-      to { transform:rotate(360deg); }
-    }
-    #redirect-block-notice {
-      position:fixed;
-      top:12px;
-      right:12px;
-      background:rgba(0,0,0,0.85);
-      color:#fff;
-      padding:10px 16px;
-      border-radius:8px;
-      z-index:10000;
-      font-size:14px;
-      display:flex;
-      align-items:center;
-      gap:12px;
-      transition:opacity 0.4s;
-      pointer-events:auto;
-    }
-    #redirect-block-notice button.close-notice {
-      background:none;
-      border:none;
-      color:#fff;
-      font-size:20px;
-      cursor:pointer;
-      padding:0;
-      width:24px;
-      height:24px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    #redirect-block-notice button.close-notice:hover {
-      color:#ff6b6b;
-    }
-    #redirect-block-notice.show {
-      animation: slideIn 0.35s forwards, slideOut 0.35s forwards 2.6s;
-    }
-    @keyframes slideIn {
-      from { transform:translateX(100%); opacity:0 }
-      to { transform:translateX(0); opacity:1 }
-    }
-    @keyframes slideOut {
-      from { transform:translateX(0); opacity:1 }
-      to { transform:translateX(100%); opacity:0 }
-    }
+    html,body{height:100%;margin:0;padding:0;overflow:hidden;font-family:Arial,sans-serif;background:#000;color:#fff}
+    iframe{width:100%;height:100%;border:0;display:none;position:absolute;inset:0;z-index:1}
+    #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.95);z-index:9999;color:#fff}
+    #loader div{width:40px;height:40px;border:4px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #redirect-block-notice{position:fixed;top:12px;right:12px;background:rgba(0,0,0,.85);color:#fff;padding:10px 16px;border-radius:8px;z-index:10000;font-size:14px;display:flex;align-items:center;gap:12px;transition:opacity .4s;pointer-events:auto}
+    #redirect-block-notice button.close-notice{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center}
+    #redirect-block-notice button.close-notice:hover{color:#ff6b6b}
+    #redirect-block-notice.show{animation:slideIn .35s forwards,slideOut .35s forwards 2.6s}
+    @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
   </style>
 </head>
 <body>
   <div id="loader"><div></div></div>
-  
   <div id="redirect-block-notice" aria-live="polite" role="status">
     <span id="notice-text"></span>
     <button class="close-notice" aria-label="Close notice">×</button>
   </div>
 
   <script>
-    const SETTINGS_KEY = 'userSettings';
-    const loader = document.getElementById('loader');
-    const notice = document.getElementById('redirect-block-notice');
-    const noticeText = document.getElementById('notice-text');
-    let iframe = null;
-    let currentRedirectBlock = null;
-    let currentGame = null;
-    let gamesData = null;
+    const SETTINGS_KEY="userSettings";
+    const loader=document.getElementById("loader");
+    const notice=document.getElementById("redirect-block-notice");
+    const noticeText=document.getElementById("notice-text");
+    let iframe=null;
+    let currentRedirectBlock=null;
+    let currentGame=null;
+    let gamesData=null;
 
-    function readSettings() {
-      try {
-        const raw = localStorage.getItem(SETTINGS_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        return { redirectBlockSwitch: parsed.redirectBlockSwitch !== undefined ? !!parsed.redirectBlockSwitch : true };
-      } catch (e) {
-        return { redirectBlockSwitch: true };
-      }
-    }
+    function readSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);const parsed=raw?JSON.parse(raw):{};return{redirectBlockSwitch:parsed.redirectBlockSwitch!==undefined?!!parsed.redirectBlockSwitch:true}}catch(e){return{redirectBlockSwitch:true}}}
 
-    function showNotice(text) {
-      noticeText.textContent = text;
-      notice.classList.remove('show');
-      void notice.offsetWidth;
-      notice.classList.add('show');
-    }
+    function showNotice(text){noticeText.textContent=text;notice.classList.remove("show");void notice.offsetWidth;notice.classList.add("show")}
 
-    function injectScriptsIntoIframe(ifr, blockLogs, strictMode) {
-      try {
-        const doc = ifr.contentDocument || ifr.contentWindow?.document;
-        if (!doc || !doc.head) return;
+    function injectStrictIsolation(ifr,blockLogs){
+      try{
+        const doc=ifr.contentDocument||ifr.contentWindow?.document;
+        if(!doc||!doc.head)return;
 
-        // FPS limiter / game loop helper
-        const fps = doc.createElement('script');
-        fps.textContent = `(function(){let last=0;function loop(ts){if(!last||ts-last>16){if(typeof window.__updateGame==='function')try{window.__updateGame();}catch(e){}if(typeof window.__renderGame==='function')try{window.__renderGame();}catch(e){}last=ts;}requestAnimationFrame(loop);}requestAnimationFrame(loop);})();`;
+        const fps=doc.createElement("script");
+        fps.textContent=`(function(){let last=0;function loop(ts){if(!last||ts-last>16.6){try{window.__updateGame?.();window.__renderGame?.()}catch(e){}last=ts}requestAnimationFrame(loop)}requestAnimationFrame(loop)})();`;
         doc.head.appendChild(fps);
 
-        // Visibility pause/resume
-        const vis = doc.createElement('script');
-        vis.textContent = `document.addEventListener('visibilitychange',()=>{if(document.hidden){if(typeof window.__pauseGame==='function')try{window.__pauseGame();}catch(e){}}else{if(typeof window.__resumeGame==='function')try{window.__resumeGame();}catch(e){}}});`;
+        const vis=doc.createElement("script");
+        vis.textContent=`document.addEventListener("visibilitychange",()=>{try{document.hidden?window.__pauseGame?.():window.__resumeGame?.()}catch(e){}});`;
         doc.head.appendChild(vis);
 
-        // Passive event listeners
-        const passive = doc.createElement('script');
-        passive.textContent = `['touchstart','touchmove','wheel','keydown','keyup'].forEach(ev=>window.addEventListener(ev,()=>{}, {passive:true}));`;
+        const passive=doc.createElement("script");
+        passive.textContent=`["touchstart","touchmove","wheel","keydown","keyup"].forEach(ev=>addEventListener(ev,()=>{},{passive:true}));`;
         doc.head.appendChild(passive);
 
-        // Redirect blocker (always injected)
-        const blockRedirects = doc.createElement('script');
-        blockRedirects.textContent = `(function(){const originalOpen=window.open;window.open=function(url,name,specs){console.warn('Blocked window.open:',url);return null;};const originalLocation=Object.getOwnPropertyDescriptor(window.location,'href');Object.defineProperty(window.location,'href',{get:originalLocation.get,set:function(val){console.warn('Blocked location.href change:',val);},configurable:true});window.location.assign=function(url){console.warn('Blocked location.assign:',url);};window.location.replace=function(url){console.warn('Blocked location.replace:',url);};})();`;
-        doc.head.appendChild(blockRedirects);
+        const strict=doc.createElement("script");
+        strict.textContent=`(function(){
+          window.alert=window.confirm=window.prompt=function(){return null};
+          const block=()=>{throw new Error("Blocked")};
+          window.open=()=>null;
+          window.location.assign=window.location.replace=block;
+          Object.defineProperty(window.location,"href",{get:()=>window.location.pathname,set:block,configurable:true});
+          delete window.parent;delete window.top;delete window.opener;
+          Object.defineProperties(window,{parent:{get:()=>window,configurable:false},top:{get:()=>window,configurable:false},opener:{get:()=>null,configurable:false}});
+          const realPM=window.postMessage;
+          window.postMessage=function(m,o,t){if(o!==window.origin&&o!=="*")return;realPM.apply(this,arguments)};
+          window.close=window.focus=window.blur=()=>{};
+          Object.defineProperty(document,"domain",{value:document.domain,writable:false,configurable:false});
+          ["beforeunload","unload","pagehide"].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();e.returnValue="";return false},{capture:true}));
+          const realAE=window.addEventListener;
+          window.addEventListener=function(t,l,o){if(["beforeunload","unload","pagehide","message"].includes(t))return;realAE.apply(this,arguments)};
+          const realST=window.setTimeout;const realSI=window.setInterval;
+          window.setTimeout=function(f,d,...a){return realST(typeof f==="string"?f:()=>{},d,...a)};
+          window.setInterval=function(f,d,...a){return realSI(typeof f==="string"?f:()=>{},d,...a)};
+        })();`;
+        doc.head.appendChild(strict);
 
-        if (blockLogs) {
-          const disableLogs = doc.createElement('script');
-          disableLogs.textContent = `(function(){try{console.log=console.debug=console.warn=console.error=function(){};}catch(e){}})();`;
-          doc.head.appendChild(disableLogs);
+        if(blockLogs){
+          const noLogs=doc.createElement("script");
+          noLogs.textContent=`(function(){const n=()=>{};console.log=console.debug=console.info=console.warn=console.error=console.table=n;window.console=new Proxy(console,{get:()=>n})})();`;
+          doc.head.appendChild(noLogs);
         }
-      } catch (err) {
-        console.warn('injectScriptsIntoIframe:', err);
-      }
+      }catch(e){}
     }
 
-    function createIframeForGame(redirectBlock) {
-      if (iframe) {
-        iframe.remove();
-        iframe = null;
-      }
-      if (!currentGame) return;
+    function createIframeForGame(redirectBlock){
+      if(iframe){iframe.remove();iframe=null}
+      if(!currentGame)return;
 
-      const newIframe = document.createElement('iframe');
-      newIframe.src = currentGame.link;
-      newIframe.allowFullscreen = true;
+      const newIframe=document.createElement("iframe");
+      newIframe.src=currentGame.link;
+      newIframe.allowFullscreen=true;
 
-      let sandboxValue = redirectBlock
-        ? 'allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation'
-        : 'allow-scripts allow-same-origin allow-pointer-lock allow-top-navigation allow-forms allow-modals allow-popups allow-presentation allow-storage-access-by-user-activation allow-downloads allow-orientation-lock allow-video-frame-callbacks allow-popups-to-escape-sandbox';
+      let sb="allow-scripts allow-same-origin allow-pointer-lock allow-modals allow-popups allow-presentation";
+      if(!redirectBlock)sb+=" allow-popups-to-escape-sandbox allow-orientation-lock";
 
-      newIframe.setAttribute('sandbox', sandboxValue);
+      newIframe.setAttribute("sandbox",sb);
+      newIframe.setAttribute("referrerpolicy","no-referrer");
+      newIframe.setAttribute("csp","default-src 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline';");
 
-      newIframe.onload = () => {
-        injectScriptsIntoIframe(newIframe, !!redirectBlock, !!redirectBlock);
-
-        loader.style.display = 'none';
-        newIframe.style.display = 'block';
-
-        // Initial focus
+      newIframe.onload=()=>{
+        injectStrictIsolation(newIframe,!!redirectBlock);
+        loader.style.display="none";
+        newIframe.style.display="block";
         newIframe.focus();
         newIframe.contentWindow?.focus();
-
-        setTimeout(() => {
-          newIframe.focus();
-          newIframe.contentWindow?.focus();
-        }, 300);
-
-        showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
-
-        // Start automatic focus management
+        setTimeout(()=>{newIframe.focus();newIframe.contentWindow?.focus()},300);
+        setTimeout(()=>{newIframe.focus();newIframe.contentWindow?.focus()},800);
+        showNotice(`Redirect block: ${redirectBlock?"ON (strict)":"OFF (loose)"}`);
         initAutoFocusManagement();
       };
 
-      newIframe.onerror = () => {
-        console.error('Iframe failed to load, redirecting home');
-        location.href = '/';
-      };
+      newIframe.onerror=()=>{location.href="/"};
 
       document.body.appendChild(newIframe);
-      iframe = newIframe;
-      currentRedirectBlock = !!redirectBlock;
-
-      // Pre-load focus attempt
-      setTimeout(() => newIframe.focus(), 100);
+      iframe=newIframe;
+      currentRedirectBlock=!!redirectBlock;
+      setTimeout(()=>newIframe.focus(),100);
     }
 
-    // === VOLLEDIG AUTOMATISCHE FOCUS MANAGEMENT ===
-    function initAutoFocusManagement() {
-      if (!iframe) return;
+    function initAutoFocusManagement(){
+      if(!iframe)return;
+      document.addEventListener("click",e=>{
+        if(!iframe)return;
+        const t=e.target;
+        if(t===iframe||iframe.contains(t))return;
+        if(t.matches("button,input,textarea,select,a,[tabindex]:not([tabindex=\"-1\"])")||(t.hasAttribute("tabindex")&&t.getAttribute("tabindex")!=="-1"))return;
+        let el=t;while(el&&el!==document.body){if(el.onclick||el.getAttribute?.("onclick"))return;el=el.parentElement}
+        iframe.focus();iframe.contentWindow?.focus();setTimeout(()=>{iframe.focus();iframe.contentWindow?.focus()},50)
+      },true);
 
-      document.addEventListener('click', (e) => {
-        if (!iframe) return;
+      document.addEventListener("touchstart",e=>{
+        if(!iframe)return;
+        const t=e.target;
+        if(t===iframe||iframe.contains(t))return;
+        if(t.closest?.("button,input,textarea,select,a,[role=\"button\"],[tabindex]")||t.onclick)return;
+        iframe.focus();iframe.contentWindow?.focus()
+      },true);
 
-        const target = e.target;
-
-        // Klik direct op iframe → laat browser focus geven
-        if (target === iframe || iframe.contains(target)) return;
-
-        // Natuurlijk focusbare elementen (button, input, a, etc.)
-        const naturallyFocusable = target.matches &&
-          (target.matches('button, input, textarea, select, a, [tabindex]:not([tabindex="-1"])') ||
-           (target.hasAttribute('tabindex') && target.getAttribute('tabindex') !== '-1'));
-
-        if (naturallyFocusable) return;
-
-        // Elementen met click handler
-        let el = target;
-        while (el && el !== document.body) {
-          if (el.onclick || (el.getAttribute && el.getAttribute('onclick'))) {
-            return; // interactieve UI
-          }
-          el = el.parentElement;
-        }
-
-        // Anders: lege achtergrond → focus terug naar game
-        iframe.focus();
-        iframe.contentWindow?.focus();
-
-        setTimeout(() => {
-          iframe.focus();
-          iframe.contentWindow?.focus();
-        }, 50);
-      }, true);
-
-      // Touch support
-      document.addEventListener('touchstart', (e) => {
-        if (!iframe) return;
-        const target = e.target;
-
-        if (target === iframe || iframe.contains(target)) return;
-
-        if (target.closest && target.closest('button,input,textarea,select,a,[role="button"],[tabindex]') || target.onclick) {
-          return;
-        }
-
-        iframe.focus();
-        iframe.contentWindow?.focus();
-      }, true);
-
-      // Muisbeweging over lege ruimte (goed voor pointer lock games)
-      document.addEventListener('mousemove', (e) => {
-        if (!iframe) return;
-        const target = e.target;
-
-        if (target === iframe || iframe.contains(target)) return;
-
-        if (target.closest && target.closest('button,input,a,[role="button"],[tabindex]')) return;
-
-        if (document.activeElement !== iframe) {
-          iframe.focus();
-        }
+      document.addEventListener("mousemove",e=>{
+        if(!iframe)return;
+        const t=e.target;
+        if(t===iframe||iframe.contains(t))return;
+        if(t.closest?.("button,input,a,[role=\"button\"],[tabindex]"))return;
+        if(document.activeElement!==iframe)iframe.focus()
       });
+
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden&&iframe)setTimeout(()=>{iframe.focus();iframe.contentWindow?.focus()},150)})
     }
 
-    // Visibility focus restore
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && iframe) {
-        setTimeout(() => {
-          iframe.focus();
-          iframe.contentWindow?.focus();
-        }, 100);
-      }
-    });
-
-    async function loadGamesJSON(timeoutMs = 5000) {
-      try {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeoutMs);
-        const res = await fetch('/assets/json/games.json', { signal: controller.signal });
+    async function loadGamesJSON(timeoutMs=5000){
+      try{
+        const c=new AbortController();
+        const id=setTimeout(()=>c.abort(),timeoutMs);
+        const r=await fetch("/assets/json/games.json",{signal:c.signal});
         clearTimeout(id);
-        if (!res.ok) throw new Error('games.json fetch failed');
-        return await res.json();
-      } catch (e) {
-        console.error('Failed to load games.json', e);
-        return null;
-      }
+        if(!r.ok)throw new Error("fetch failed");
+        return await r.json()
+      }catch(e){return null}
     }
 
-    function getGameIdFromPath() {
-      let path = window.location.pathname;
-      let parts = path.split('/').filter(p => p);
-      if (parts.length === 0) return null;
-      const lastPart = parts[parts.length - 1];
-      const gameId = parseInt(lastPart, 10);
-      return isNaN(gameId) ? null : gameId;
+    function getGameIdFromPath(){
+      const parts=window.location.pathname.split("/").filter(p=>p);
+      if(parts.length===0)return null;
+      const id=parseInt(parts[parts.length-1],10);
+      return isNaN(id)?null:id
     }
 
-    async function loadGame() {
-      document.title = "Loading... | HyperRush";
-      loader.style.display = 'flex';
-
-      const gameNumber = getGameIdFromPath();
-      if (!gameNumber) return location.href = '/';
-
-      if (!gamesData) {
-        gamesData = await loadGamesJSON();
-        if (!gamesData) return location.href = '/';
-      }
-
-      currentGame = gamesData.find(g => Number(g.number) === gameNumber);
-      if (!currentGame) return location.href = '/';
-
-      document.title = `${currentGame.name} | HyperRush`;
-
-      const settings = readSettings();
-      createIframeForGame(!!settings.redirectBlockSwitch);
+    async function loadGame(){
+      document.title="Loading... | HyperRush";
+      loader.style.display="flex";
+      const num=getGameIdFromPath();
+      if(!num)return location.href="/";
+      if(!gamesData){gamesData=await loadGamesJSON();if(!gamesData)return location.href="/"}
+      currentGame=gamesData.find(g=>Number(g.number)===num);
+      if(!currentGame)return location.href="/";
+      document.title=`${currentGame.name} | HyperRush`;
+      const s=readSettings();
+      createIframeForGame(!!s.redirectBlockSwitch)
     }
 
-    function handleSettingsChange(newSettings) {
-      const redirectBlock = !!(newSettings && newSettings.redirectBlockSwitch);
-
-      if (currentRedirectBlock === null) {
-        currentRedirectBlock = redirectBlock;
-        return;
-      }
-
-      if (redirectBlock !== currentRedirectBlock) {
-        showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
-        loader.style.display = 'flex';
-        createIframeForGame(redirectBlock);
-      } else {
-        showNotice(`Redirect block: ${redirectBlock ? 'ON (strict)' : 'OFF (loose)'}`);
-      }
+    function handleSettingsChange(ns){
+      const rb=!!(ns&&ns.redirectBlockSwitch);
+      if(currentRedirectBlock===null){currentRedirectBlock=rb;return}
+      if(rb!==currentRedirectBlock){
+        showNotice(`Redirect block: ${rb?"ON (strict)":"OFF (loose)"}`);
+        loader.style.display="flex";
+        createIframeForGame(rb)
+      }else{showNotice(`Redirect block: ${rb?"ON (strict)":"OFF (loose)"}`)}
     }
 
-    // Settings listeners
-    window.addEventListener('storage', e => {
-      if (e.key === SETTINGS_KEY) {
-        try {
-          const parsed = e.newValue ? JSON.parse(e.newValue) : {};
-          handleSettingsChange({ redirectBlockSwitch: parsed.redirectBlockSwitch !== undefined ? !!parsed.redirectBlockSwitch : true });
-        } catch (_) {
-          handleSettingsChange({ redirectBlockSwitch: true });
-        }
+    window.addEventListener("storage",e=>{
+      if(e.key===SETTINGS_KEY){
+        try{const p=e.newValue?JSON.parse(e.newValue):{};handleSettingsChange({redirectBlockSwitch:p.redirectBlockSwitch!==undefined?!!p.redirectBlockSwitch:true})}
+        catch(_){handleSettingsChange({redirectBlockSwitch:true})}
       }
     });
 
-    window.addEventListener('userSettingsChanged', e => {
-      if (e?.detail) handleSettingsChange(e.detail);
-    });
+    window.addEventListener("userSettingsChanged",e=>{if(e?.detail)handleSettingsChange(e.detail)});
 
-    // Navigation
-    window.addEventListener('popstate', () => {
-      if (iframe) {
-        iframe.remove();
-        iframe = null;
-      }
-      loadGame();
-    });
+    window.addEventListener("popstate",()=>{if(iframe){iframe.remove();iframe=null}loadGame()});
 
-    // Close notice button
-    document.querySelector('.close-notice')?.addEventListener('click', () => {
-      notice.style.display = 'none';
-    });
+    document.querySelector(".close-notice")?.addEventListener("click",()=>{notice.style.display="none"});
 
-    // Start
-    document.addEventListener('DOMContentLoaded', () => {
-      loadGame();
-    });
+    document.addEventListener("DOMContentLoaded",loadGame);
   </script>
 </body>
 </html>
