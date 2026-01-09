@@ -33,7 +33,7 @@
   <div id="game-overlay">
     <canvas id="particles"></canvas>
     <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;font-size:18px;pointer-events:none">
-      Click & move mouse to interact • Game loading in background...
+      Click & move mouse to interact • Game loading...
     </div>
   </div>
   <div id="redirect-block-notice" aria-live="polite" role="status">
@@ -52,7 +52,6 @@
     let currentGame = null;
     let gamesData = null;
 
-    // Simple interactive particle system for instant feedback
     const canvas = document.getElementById("particles");
     const ctx = canvas.getContext("2d");
     canvas.width = window.innerWidth;
@@ -153,7 +152,7 @@
       if (!redirectBlock) sb += " allow-popups-to-escape-sandbox allow-orientation-lock";
       newIframe.sandbox = sb;
       newIframe.referrerPolicy = "no-referrer";
-      newIframe.loading = "eager"; // Start loading immediately
+      newIframe.loading = "eager"; 
 
       newIframe.onload = () => {
         injectMinimal(newIframe, !!redirectBlock);
@@ -162,7 +161,7 @@
         setTimeout(() => { overlay.style.display = "none"; }, 1000);
         newIframe.focus();
         newIframe.contentWindow?.focus();
-        showNotice(`Redirect block: ${redirectBlock ? "ON" : "OFF"} • Game ready!`);
+        showNotice(`Redirect block: ${redirectBlock ? "ON" : "OFF"}`);
       };
       newIframe.onerror = () => { location.href = "/"; };
 
@@ -201,7 +200,6 @@
       const s = readSettings();
       createIframeForGame(!!s.redirectBlockSwitch);
 
-      // Hide real loader quickly → show interactive overlay
       setTimeout(() => {
         loader.style.opacity = "0";
         setTimeout(() => { loader.style.display = "none"; }, 600);
