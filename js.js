@@ -1,40 +1,42 @@
 (function() {
+    console.log("HyperRush Debug: Library geladen.");
+
     const HyperRush = {
         init: async function(config) {
-            // Destructuring met default waarden
+            console.log("HyperRush Debug: Init aangeroepen met config:", config);
+
             const {
                 containerId = 'hyperrush-game',
                 nr = null,
                 url = null,
                 credits = true,
-                redirectBlock = true // Default is true
+                redirectBlock = true
             } = config;
 
-            // 1. Redirect Block Logic - NU GEFIXT
-            // Alleen uitvoeren als de gebruiker redirectBlock NIET op false heeft gezet
-            if (redirectBlock === true) {
-                const inIframe = (() => { 
-                    try { 
-                        return window.self !== window.top; 
-                    } catch (e) { 
-                        return true; 
-                    } 
-                })();
+            // 1. Redirect Check Debug
+            const inIframe = (() => { 
+                try { return window.self !== window.top; } 
+                catch (e) { return true; } 
+            })();
+            
+            console.log("HyperRush Debug: Is in iframe?", inIframe);
+            console.log("HyperRush Debug: redirectBlock setting:", redirectBlock);
 
-                if (!inIframe) {
-                    console.log("HyperRush: Redirecting naar main site...");
-                    window.location.replace('https://hyperrushnet.github.io/');
-                    return; // Stop de rest van de script uitvoering
-                }
+            if (redirectBlock === true && !inIframe) {
+                console.warn("HyperRush Debug: REDIRECT TRIGGERED! Je wordt nu doorgestuurd...");
+                window.location.replace('https://hyperrushnet.github.io/');
+                return;
+            } else {
+                console.log("HyperRush Debug: Redirect overgeslagen (correct).");
             }
 
             const container = document.getElementById(containerId);
             if (!container) {
-                console.error(`HyperRush: Container met id "${containerId}" niet gevonden.`);
+                console.error(`HyperRush Debug: ERROR - Container #${containerId} niet gevonden in de DOM.`);
                 return;
             }
 
-            // 2. CSS Injecteren (Hetzelfde als voorheen)
+            // 2. CSS Injecteren
             const style = document.createElement('style');
             style.textContent = `
                 #${containerId} { position:relative; width:100%; height:100%; overflow:hidden; background:#000; font-family:system-ui,-apple-system,sans-serif; }
@@ -54,17 +56,26 @@
             `;
             document.head.appendChild(style);
 
-            // 3. Game URL bepalen
+            // 3. Game URL Fetch Debug
             let gameUrl = url;
             if (!gameUrl && nr) {
+                console.log(`HyperRush Debug: Zoeken naar game nr: ${nr}...`);
                 try {
                     const res = await fetch('https://hyperrushnet.github.io/assets/json/games.json');
                     const games = await res.json();
                     const game = games.find(g => g.number === parseInt(nr));
-                    if (game?.link) gameUrl = 'https://hyperrushnet.github.io' + game.link;
-                } catch (e) { console.warn("HyperRush: Kon games.json niet laden."); }
+                    if (game?.link) {
+                        gameUrl = 'https://hyperrushnet.github.io' + game.link;
+                        console.log("HyperRush Debug: Game gevonden:", gameUrl);
+                    } else {
+                        console.warn("HyperRush Debug: Game nr niet gevonden in JSON.");
+                    }
+                } catch (e) { 
+                    console.error("HyperRush Debug: Fetch fout:", e); 
+                }
             }
             gameUrl ||= 'https://hyperrushnet.github.io/games-1/bacon-may-die/';
+            console.log("HyperRush Debug: Finale URL wordt:", gameUrl);
 
             // 4. HTML Opbouwen
             container.innerHTML = `
@@ -86,6 +97,7 @@
             this.initParticles();
 
             iframe.onload = () => {
+                console.log("HyperRush Debug: Iframe volledig geladen.");
                 iframe.classList.add('loaded');
                 const loader = document.getElementById('hr-loader');
                 if(loader) {
@@ -106,7 +118,7 @@
 
             const animate = () => {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (particles.length < 30 && Math.random() > 0.9) {
+                if (particles.length < 20 && Math.random() > 0.9) {
                     particles.push({
                         x: Math.random() * canvas.width,
                         y: -10,
