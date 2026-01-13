@@ -1,13 +1,32 @@
 (function() {
     const HyperRush = {
         init: async function(config) {
+            // Destructuring met default waarden
             const {
                 containerId = 'hyperrush-game',
                 nr = null,
                 url = null,
                 credits = true,
-                redirectBlock = true
+                redirectBlock = true // Default is true
             } = config;
+
+            // 1. Redirect Block Logic - NU GEFIXT
+            // Alleen uitvoeren als de gebruiker redirectBlock NIET op false heeft gezet
+            if (redirectBlock === true) {
+                const inIframe = (() => { 
+                    try { 
+                        return window.self !== window.top; 
+                    } catch (e) { 
+                        return true; 
+                    } 
+                })();
+
+                if (!inIframe) {
+                    console.log("HyperRush: Redirecting naar main site...");
+                    window.location.replace('https://hyperrushnet.github.io/');
+                    return; // Stop de rest van de script uitvoering
+                }
+            }
 
             const container = document.getElementById(containerId);
             if (!container) {
@@ -15,19 +34,10 @@
                 return;
             }
 
-            // 1. Redirect Block Logic
-            if (redirectBlock) {
-                const inIframe = (() => { try { return self !== top; } catch { return true; } })();
-                if (!inIframe) {
-                    location.replace('https://hyperrushnet.github.io/');
-                    return;
-                }
-            }
-
-            // 2. CSS Injecteren
+            // 2. CSS Injecteren (Hetzelfde als voorheen)
             const style = document.createElement('style');
             style.textContent = `
-                #${containerId} { position:relative; width:100%; height:100vh; overflow:hidden; background:#000; font-family:system-ui,-apple-system,sans-serif; }
+                #${containerId} { position:relative; width:100%; height:100%; overflow:hidden; background:#000; font-family:system-ui,-apple-system,sans-serif; }
                 .hr-iframe { width:100%; height:100%; border:none; display:block; opacity:0; transition:opacity 0.9s ease; }
                 .hr-iframe.loaded { opacity:1; }
                 .hr-loader { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; z-index:99; gap:20px; transition:opacity 0.6s ease; }
@@ -73,20 +83,21 @@
             iframe.sandbox = 'allow-scripts allow-same-origin allow-pointer-lock allow-forms';
             container.appendChild(iframe);
 
-            // 5. Particles Engine
             this.initParticles();
 
-            // 6. Loader verbergen
             iframe.onload = () => {
                 iframe.classList.add('loaded');
                 const loader = document.getElementById('hr-loader');
-                loader.classList.add('hidden');
-                setTimeout(() => loader.remove(), 700);
+                if(loader) {
+                    loader.classList.add('hidden');
+                    setTimeout(() => loader.remove(), 700);
+                }
             };
         },
 
         initParticles: function() {
             const canvas = document.getElementById('hr-particles');
+            if(!canvas) return;
             const ctx = canvas.getContext('2d');
             let particles = [];
             const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
