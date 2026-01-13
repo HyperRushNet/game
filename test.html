@@ -5,163 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HyperRush Games</title>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-      color: #fff;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-
-    .iframe-container {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;          /* Belangrijk: forceert clipping */
-      clip-path: inset(0);       /* Extra harde clip in moderne browsers */
-      z-index: 1;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-      opacity: 0;
-      transition: opacity 0.9s cubic-bezier(0.23, 1, 0.32, 1);
-      will-change: opacity;
-      overflow: hidden;          /* Probeer overflow te blokkeren */
-    }
-
-    iframe.loaded {
-      opacity: 1;
-    }
-
-    #loader {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #000;
-      z-index: 9999;
-      gap: 20px;
-      transition: opacity 0.6s ease;
-    }
-
-    #loader.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .spinner {
-      position: relative;
-      width: 64px;
-      height: 64px;
-    }
-
-    .spinner::before,
-    .spinner::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 4px solid transparent;
-    }
-
-    .spinner::before {
-      border-top-color: #00d4ff;
-      border-right-color: #00d4ff;
-      animation: spin 1.2s linear infinite;
-    }
-
-    .spinner::after {
-      border-top-color: rgba(0, 212, 255, 0.4);
-      border-bottom-color: rgba(0, 212, 255, 0.4);
-      animation: spin 1.8s linear infinite reverse;
-      box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .loading-text {
-      font-size: 15px;
-      opacity: 0.75;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    #game-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    #particles {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .hrn-credits {
-      position: fixed;
-      bottom: 12px;
-      right: 16px;
-      z-index: 100;
-      font-size: 11px;
-      color: #111;
-      background: rgba(255,255,255,0.82);
-      padding: 4px 10px;
-      border-radius: 5px;
-      text-transform: uppercase;
-      letter-spacing: 0.7px;
-      pointer-events: none;
-      opacity: 1;
-      animation: fadeOutCredits 8s forwards;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.2);
-    }
-
-    @keyframes fadeOutCredits {
-      0%, 65% { opacity: 1; }
-      100%    { opacity: 0; }
-    }
+    html, body { height:100%; margin:0; padding:0; overflow:hidden; background:#000; color:#fff; font-family:system-ui,-apple-system,sans-serif; }
+    .iframe-container { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; clip-path:inset(0); z-index:1; }
+    iframe { width:100%; height:100%; border:none; display:block; opacity:0; transition:opacity 0.9s cubic-bezier(0.23,1,0.32,1); will-change:opacity; overflow:hidden; }
+    iframe.loaded { opacity:1; }
+    #loader { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; z-index:9999; gap:20px; transition:opacity 0.6s ease; }
+    #loader.hidden { opacity:0; pointer-events:none; }
+    .spinner { position:relative; width:64px; height:64px; }
+    .spinner::before, .spinner::after { content:''; position:absolute; inset:0; border-radius:50%; border:4px solid transparent; }
+    .spinner::before { border-top-color:#00d4ff; border-right-color:#00d4ff; animation:spin 1.2s linear infinite; }
+    .spinner::after { border-top-color:rgba(0,212,255,0.4); border-bottom-color:rgba(0,212,255,0.4); animation:spin 1.8s linear infinite reverse; box-shadow:0 0 20px rgba(0,212,255,0.5); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-text { font-size:15px; opacity:0.75; letter-spacing:1px; text-transform:uppercase; }
+    #game-overlay { position:absolute; inset:0; pointer-events:none; z-index:2; }
+    #particles { width:100%; height:100%; display:block; }
+    .hrn-credits { position:fixed; bottom:12px; right:16px; z-index:100; font-size:11px; color:#111; background:rgba(255,255,255,0.82); padding:4px 10px; border-radius:5px; text-transform:uppercase; letter-spacing:0.7px; pointer-events:none; opacity:1; animation:fadeOutCredits 8s forwards; box-shadow:0 1px 6px rgba(0,0,0,0.2); }
+    @keyframes fadeOutCredits { 0%,65% { opacity:1; } 100% { opacity:0; } }
   </style>
 </head>
 <body>
-
   <div id="loader">
     <div class="spinner"></div>
     <div class="loading-text">Loading HyperRush</div>
   </div>
-
-  <div id="game-overlay">
-    <canvas id="particles"></canvas>
-  </div>
-
-  <div class="iframe-container">
-    <!-- iframe komt hier dynamisch in -->
-  </div>
+  <div id="game-overlay"><canvas id="particles"></canvas></div>
+  <div class="iframe-container"></div>
 
   <script>
     (async function init() {
       const params = new URLSearchParams(location.search);
 
-      // Redirect block (default: true)
-      if (params.get('redirect_block') !== 'false') {
+      // Redirect block – default aan, uit met redirect_block=false / 0 / no / leeg
+      const redirectParam = params.get('redirect_block')?.toLowerCase();
+      const redirectEnabled = !(
+        redirectParam === 'false' ||
+        redirectParam === '0' ||
+        redirectParam === 'no' ||
+        redirectParam === ''
+      );
+
+      if (redirectEnabled) {
         const inIframe = (() => { try { return self !== top; } catch { return true; } })();
         if (!inIframe) {
-          location.replace('https://hyperrushnet.github.io/');
+          location.replace('https://hyperrushnet.github.io/'); // ← pas eventueel aan
         }
       }
 
-      // Credits (default: true)
+      // Credits (default true)
       if (params.get('credits') !== 'false') {
         const div = document.createElement('div');
         div.className = 'hrn-credits';
@@ -169,7 +59,7 @@
         document.body.appendChild(div);
       }
 
-      // Game URL logica
+      // Game URL
       let gameUrl = params.get('url');
       const nr = params.get('nr');
 
@@ -179,26 +69,20 @@
           if (res.ok) {
             const games = await res.json();
             const game = games.find(g => g.number === +nr);
-            if (game?.link) {
-              gameUrl = 'https://hyperrushnet.github.io' + game.link;
-            }
+            if (game?.link) gameUrl = 'https://hyperrushnet.github.io' + game.link;
           }
         } catch {}
       }
 
       gameUrl ||= 'https://hyperrushnet.github.io/games-1/bacon-may-die/';
 
-      // Particles (blijft hetzelfde)
+      // Particles
       const canvas = document.getElementById('particles');
       const ctx = canvas.getContext('2d');
       let particles = [];
 
-      function resize() {
-        canvas.width = innerWidth;
-        canvas.height = innerHeight;
-      }
-      addEventListener('resize', resize);
-      resize();
+      function resize() { canvas.width = innerWidth; canvas.height = innerHeight; }
+      addEventListener('resize', resize); resize();
 
       function createParticle() {
         particles.push({
@@ -215,21 +99,13 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
-          p.x += p.vx;
-          p.y += p.vy;
-          p.a *= 0.988;
-          if (p.y > canvas.height + 40 || p.a < 0.01) {
-            particles.splice(i, 1);
-            continue;
-          }
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(0,212,255,${p.a.toFixed(3)})`;
-          ctx.fill();
+          p.x += p.vx; p.y += p.vy; p.a *= 0.988;
+          if (p.y > canvas.height + 40 || p.a < 0.01) { particles.splice(i, 1); continue; }
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(0,212,255,${p.a.toFixed(3)})`; ctx.fill();
         }
         requestAnimationFrame(animateParticles);
       }
-
       setInterval(createParticle, 110);
       animateParticles();
 
@@ -237,11 +113,10 @@
       const loader = document.getElementById('loader');
       const container = document.querySelector('.iframe-container');
       const iframe = document.createElement('iframe');
-
       iframe.src = gameUrl;
       iframe.allow = 'autoplay; fullscreen; gamepad; keyboard; microphone';
       iframe.sandbox = 'allow-scripts allow-same-origin allow-pointer-lock allow-forms';
-      iframe.scrolling = 'no';  // probeer scrollbars te blokkeren
+      iframe.scrolling = 'no';
 
       iframe.onload = () => {
         iframe.classList.add('loaded');
