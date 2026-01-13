@@ -20,9 +20,10 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      border: 0;
+      border: none;
       opacity: 0;
-      transition: opacity 0.6s ease;
+      transition: opacity 0.9s cubic-bezier(0.23, 1, 0.32, 1);
+      will-change: opacity;
       z-index: 1;
     }
 
@@ -39,20 +40,52 @@
       justify-content: center;
       background: #000;
       z-index: 9999;
-      gap: 12px;
+      gap: 20px;
+      transition: opacity 0.6s ease;
+    }
+
+    #loader.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid #222;
-      border-top-color: #00d4ff;
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+
+    .spinner::before,
+    .spinner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      border: 4px solid transparent;
+    }
+
+    .spinner::before {
+      border-top-color: #00d4ff;
+      border-right-color: #00d4ff;
+      animation: spin 1.2s linear infinite;
+    }
+
+    .spinner::after {
+      border-top-color: rgba(0, 212, 255, 0.4);
+      border-bottom-color: rgba(0, 212, 255, 0.4);
+      animation: spin 1.8s linear infinite reverse;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 15px;
+      opacity: 0.75;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
     #game-overlay {
@@ -70,24 +103,24 @@
 
     .hrn-credits {
       position: fixed;
-      bottom: 10px;
-      right: 14px;
+      bottom: 12px;
+      right: 16px;
       z-index: 100;
       font-size: 11px;
-      color: #111111;
-      background: rgba(255, 255, 255, 0.75);
+      color: #111;
+      background: rgba(255,255,255,0.82);
       padding: 4px 10px;
-      border-radius: 4px;
+      border-radius: 5px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.7px;
       pointer-events: none;
       opacity: 1;
-      animation: fadeOut 8s forwards;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      animation: fadeOutCredits 8s forwards;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.2);
     }
 
-    @keyframes fadeOut {
-      0%, 70% { opacity: 1; }
+    @keyframes fadeOutCredits {
+      0%, 65% { opacity: 1; }
       100%    { opacity: 0; }
     }
   </style>
@@ -96,7 +129,7 @@
 
   <div id="loader">
     <div class="spinner"></div>
-    <div style="font-size:13px; opacity:0.7;">Loading...</div>
+    <div class="loading-text">Loading HyperRush</div>
   </div>
 
   <div id="game-overlay">
@@ -104,57 +137,46 @@
   </div>
 
   <script>
-    (async function() {
+    (async function init() {
       const params = new URLSearchParams(location.search);
 
       // Redirect block (default: true)
-      const redirectBlock = params.get('redirect_block') !== 'false';
-      if (redirectBlock) {
-        const inIframe = (() => {
-          try { return window.self !== window.top; }
-          catch { return true; }
-        })();
+      if (params.get('redirect_block') !== 'false') {
+        const inIframe = (() => { try { return self !== top; } catch { return true; } })();
         if (!inIframe) {
-          location.replace('https://hyperrushnet.github.io/'); // ← pas eventueel aan
+          location.replace('https://hyperrushnet.github.io/');
         }
       }
 
-      // Credits tonen? (default: true)
-      const showCredits = params.get('credits') !== 'false';
-      if (showCredits) {
-        const credits = document.createElement('div');
-        credits.className = 'hrn-credits';
-        credits.textContent = 'Powered by HyperRush';
-        document.body.appendChild(credits);
+      // Credits (default: true)
+      if (params.get('credits') !== 'false') {
+        const div = document.createElement('div');
+        div.className = 'hrn-credits';
+        div.textContent = 'Powered by HyperRush';
+        document.body.appendChild(div);
       }
 
-      // Bepaal game URL
+      // Game URL
       let gameUrl = params.get('url');
+      const nr = params.get('nr');
 
-      // nr= prioriteit (als url niet expliciet meegegeven)
-      const nrParam = params.get('nr');
-      if (!gameUrl && nrParam && !isNaN(parseInt(nrParam))) {
-        const nr = parseInt(nrParam);
-
+      if (!gameUrl && nr && !isNaN(+nr)) {
         try {
           const res = await fetch('https://hyperrushnet.github.io/assets/json/games.json');
-          if (!res.ok) throw new Error('JSON fetch failed');
-          const data = await res.json();
-
-          // Zoek game op basis van "number"
-          const game = data.find(g => g.number === nr);
-          if (game && game.link) {
-            gameUrl = 'https://hyperrushnet.github.io' + game.link;
+          if (res.ok) {
+            const games = await res.json();
+            const game = games.find(g => g.number === +nr);
+            if (game?.link) {
+              gameUrl = 'https://hyperrushnet.github.io' + game.link;
+            }
           }
-        } catch (err) {
-          console.warn('Games JSON fetch mislukt of nr niet gevonden:', err);
-        }
+        } catch {}
       }
 
-      // Fallback als niets gevonden
-      gameUrl = gameUrl || 'https://hyperrushnet.github.io/games-1/bacon-may-die/';
+      gameUrl ||= 'https://hyperrushnet.github.io/games-1/bacon-may-die/';
 
-      // Particles
+      // ────────────────────────────────────────────────
+      // Particles (licht & soepel)
       const canvas = document.getElementById('particles');
       const ctx = canvas.getContext('2d');
       let particles = [];
@@ -166,61 +188,56 @@
       addEventListener('resize', resize);
       resize();
 
-      function spawn() {
+      function createParticle() {
         particles.push({
           x: Math.random() * canvas.width,
-          y: -20,
-          vx: (Math.random() - 0.5) * 1.2,
-          vy: Math.random() * 1.8 + 0.8,
-          r: Math.random() * 1.6 + 0.4,
-          a: Math.random() * 0.4 + 0.15
+          y: -30,
+          vx: (Math.random() - 0.5) * 1.4,
+          vy: Math.random() * 2 + 1,
+          r: Math.random() * 1.8 + 0.5,
+          a: Math.random() * 0.35 + 0.18
         });
       }
 
-      function loop() {
+      function animateParticles() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
           p.x += p.vx;
           p.y += p.vy;
-          p.a *= 0.992;
-          if (p.y > canvas.height + 20 || p.a < 0.02) {
+          p.a *= 0.988;
+          if (p.y > canvas.height + 40 || p.a < 0.01) {
             particles.splice(i, 1);
             continue;
           }
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(0,212,255,${p.a})`;
+          ctx.fillStyle = `rgba(0,212,255,${p.a.toFixed(3)})`;
           ctx.fill();
         }
-        requestAnimationFrame(loop);
-      }
-      setInterval(spawn, 120);
-      loop();
-
-      // Laad iframe
-      function start() {
-        if (!gameUrl) {
-          document.getElementById('loader').innerHTML = '<div>No game URL</div>';
-          return;
-        }
-
-        const iframe = document.createElement('iframe');
-        iframe.src = gameUrl;
-        iframe.allow = 'autoplay; fullscreen; gamepad; keyboard; microphone';
-        iframe.sandbox = 'allow-scripts allow-same-origin allow-pointer-lock allow-forms';
-
-        iframe.onload = () => {
-          iframe.classList.add('loaded');
-          document.getElementById('loader').style.display = 'none';
-          document.getElementById('game-overlay').style.display = 'none';
-        };
-
-        document.body.appendChild(iframe);
+        requestAnimationFrame(animateParticles);
       }
 
-      addEventListener('DOMContentLoaded', start);
-      start(); // direct starten (niet wachten op DOMContentLoaded in async context)
+      setInterval(createParticle, 110);
+      animateParticles();
+
+      // ────────────────────────────────────────────────
+      // Laad game + fade
+      const loader = document.getElementById('loader');
+      const iframe = document.createElement('iframe');
+
+      iframe.src = gameUrl;
+      iframe.allow = 'autoplay; fullscreen; gamepad; keyboard; microphone';
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-pointer-lock allow-forms';
+
+      iframe.onload = () => {
+        iframe.classList.add('loaded');
+        // Verberg loader met fade
+        loader.classList.add('hidden');
+        setTimeout(() => loader.remove(), 700);
+      };
+
+      document.body.appendChild(iframe);
     })();
   </script>
 </body>
