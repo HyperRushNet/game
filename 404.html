@@ -208,7 +208,7 @@
       try {
         const c = new AbortController();
         const id = setTimeout(() => c.abort(), timeoutMs);
-        const r = await fetch("/assets/json/games.json", { signal: c.signal });
+        const r = await fetch("/assets/json/games2.json", { signal: c.signal });
         clearTimeout(id);
         if (!r.ok) throw new Error("fetch failed");
         return await r.json();
